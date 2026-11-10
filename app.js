@@ -9,7 +9,7 @@
 
   // ------------------------------------------------------------- stav
   const state = { inst: "piano", pc: 0, spell: null, scale: "major", cz: true, hand: "R", pos: 0,
-                  label: "finger", sevenths: false, tempo: 110, chord: null };
+                  label: "finger", chordSize: 3, tempo: 110, chord: null, sheet: null };
 
   function load() {
     try { Object.assign(state, JSON.parse(localStorage.getItem("improvizator") || "{}")); } catch (e) { /* nic */ }
@@ -20,10 +20,12 @@
       if (T.SCALE[m[5]]) state.scale = m[5];
     }
     if (!T.SCALE[state.scale]) state.scale = "major";
-    state.chord = null;
+    if (![3, 4, 5].includes(state.chordSize)) state.chordSize = state.sevenths ? 4 : 3;   // starší uložený stav
+    delete state.sevenths;
+    state.chord = null; state.sheet = null;
   }
   function save() {
-    try { localStorage.setItem("improvizator", JSON.stringify(Object.assign({}, state, { chord: null }))); } catch (e) { /* nic */ }
+    try { localStorage.setItem("improvizator", JSON.stringify(Object.assign({}, state, { chord: null, sheet: null }))); } catch (e) { /* nic */ }
     const sp = state.spell ? `.${state.spell.letter}.${state.spell.acc}` : "";
     history.replaceState(null, "", `#${state.inst}/${state.pc}${sp}/${state.scale}`);
   }
@@ -273,6 +275,7 @@
     t.classList.add("hit"); setTimeout(() => t.classList.remove("hit"), 320);
   }
 
+  let lastScaleChords = null;   // akordy stupnice pro notový zápis
   let current = null;     // pro přehrání: { inst, seq:[{m, id}] }
   function drawInstrument() {
     const d = data();
@@ -368,6 +371,121 @@
     return { above: Math.max(16, (hi - 8) * LG / 2 + 42) + 6, below: Math.max(24, -lo * LG / 2 + 48) + 6 };
   }
 
+
+  // Akordy v notách: chords = [{ notes:[{n, oct}], id, above, below }] – každý akord svůj takt
+  function chordStaff(clef, top, ks, chords, xStart, gap, extra) {
+    const bottomY = top + 4 * LG;
+    const yOf = pos => bottomY - (pos - BOTTOM[clef]) * LG / 2;
+    const xEnd = xStart + chords.length * gap + 4;
+    let s = "";
+    for (let i = 0; i < 5; i++) s += `<line x1="8" y1="${top + i * LG}" x2="${xEnd}" y2="${top + i * LG}" stroke="${INK}" stroke-width="1"/>`;
+    s += `<line x1="8" y1="${top}" x2="8" y2="${bottomY}" stroke="${INK}" stroke-width="1.2"/>`;
+    if (clef === "treble") {
+      s += `<text x="12" y="${top + 4 * LG}" font-family='${MUSIC_FONT}' font-size="${LG * 4.1}" fill="${INK}">\u{1D11E}</text>`;
+      if (extra && extra.octaveDown) s += `<text x="25" y="${bottomY + 23}" font-family="EB Garamond,Georgia,serif" font-size="12" font-style="italic" fill="${INK}">8</text>`;
+    } else s += `<text x="12" y="${top + 3 * LG}" font-family='${MUSIC_FONT}' font-size="${LG * 3.6}" fill="${INK}">\u{1D122}</text>`;
+    const shift = clef === "bass" ? -14 : 0, kind = ks.sharps ? "sharp" : "flat";
+    ks.order.forEach((_, i) => {
+      const y = yOf(KS_POS[kind][i] + shift);
+      s += `<text x="${50 + i * 11}" y="${y + (kind === "flat" ? 3 : 5)}" font-family='${MUSIC_FONT}' font-size="${LG * 2.3}" fill="${INK}" text-anchor="middle">${kind === "sharp" ? ACC_GLYPH[1] : ACC_GLYPH[-1]}</text>`;
+    });
+    const allYs = [];
+    chords.forEach(c => c.notes.forEach(nt => allYs.push(yOf(nt.oct * 7 + nt.n.letter))));
+    const rowAbove = Math.min(top - 16, ...allYs.map(y => y - 44)), rowBelow = Math.max(bottomY + 24, ...allYs.map(y => y + 50));
+    chords.forEach((c, i) => {
+      const x = xStart + i * gap + gap / 2 + 4;
+      let g = `<g id="${c.id}">`;
+      const ps = c.notes.map(nt => nt.oct * 7 + nt.n.letter);
+      // pomocné linky
+      const lo = Math.min(...ps) - BOTTOM[clef], hi = Math.max(...ps) - BOTTOM[clef];
+      for (let q = -2; q >= lo; q -= 2) g += `<line x1="${x - 11}" y1="${yOf(BOTTOM[clef] + q)}" x2="${x + 11}" y2="${yOf(BOTTOM[clef] + q)}" stroke="${INK}" stroke-width="1"/>`;
+      for (let q = 10; q <= hi; q += 2) g += `<line x1="${x - 11}" y1="${yOf(BOTTOM[clef] + q)}" x2="${x + 11}" y2="${yOf(BOTTOM[clef] + q)}" stroke="${INK}" stroke-width="1"/>`;
+      // hlavičky (sekunda vedle sebe), posuvky ve sloupcích
+      let prevP = null, prevShift = false, accCol = 0;
+      const measure = new Map();
+      const order = c.notes.map((nt, k) => k).sort((a, b) => ps[a] - ps[b]);
+      order.forEach(k => {
+        const nt = c.notes[k], p = ps[k], y = yOf(p);
+        const sh = prevP !== null && p - prevP === 1 && !prevShift;
+        const hx = x + (sh ? 12 : 0);
+        const cur = measure.has(p) ? measure.get(p) : ks.acc[nt.n.letter];
+        if (nt.n.acc !== cur) {
+          g += `<text x="${x - 15 - (accCol % 3) * 10}" y="${y + (nt.n.acc < 0 ? 3 : 5)}" font-family='${MUSIC_FONT}' font-size="${LG * 2.3}" fill="${INK}" text-anchor="middle">${ACC_GLYPH[nt.n.acc]}</text>`;
+          measure.set(p, nt.n.acc); accCol++;
+        }
+        g += `<ellipse cx="${hx}" cy="${y}" rx="6.3" ry="4.6" transform="rotate(-20 ${hx} ${y})" fill="${INK}"/>`;
+        prevP = p; prevShift = sh;
+      });
+      const yLo = yOf(Math.min(...ps)), yHi = yOf(Math.max(...ps));
+      const up = (lo + hi) / 2 < 4;
+      g += up ? `<line x1="${x + 5.6}" y1="${yLo - 1}" x2="${x + 5.6}" y2="${yHi - 33}" stroke="${INK}" stroke-width="1.3"/>`
+              : `<line x1="${x - 5.6}" y1="${yHi + 1}" x2="${x - 5.6}" y2="${yLo + 33}" stroke="${INK}" stroke-width="1.3"/>`;
+      if (c.above) g += `<text x="${x}" y="${rowAbove}" text-anchor="middle" font-family="EB Garamond,Georgia,serif" font-weight="700" font-size="16" fill="${INK}">${esc(c.above)}</text>`;
+      if (c.below) g += `<text x="${x}" y="${rowBelow}" text-anchor="middle" font-family="EB Garamond,Georgia,serif" font-weight="600" font-size="14" fill="#555">${esc(c.below)}</text>`;
+      s += g + `</g>`;
+      const bx = xStart + (i + 1) * gap + 4;
+      s += i === chords.length - 1
+        ? `<line x1="${bx}" y1="${top}" x2="${bx}" y2="${bottomY}" stroke="${INK}" stroke-width="1.2"/><line x1="${bx + 4}" y1="${top}" x2="${bx + 4}" y2="${bottomY}" stroke="${INK}" stroke-width="3.2"/>`
+        : `<line x1="${bx}" y1="${top}" x2="${bx}" y2="${bottomY}" stroke="${INK}" stroke-width="1"/>`;
+    });
+    return { svg: s, above: top - rowAbove + 18, below: rowBelow - bottomY + 8 };
+  }
+
+  // Tóny akordu v sevřené poloze nad MIDI výškou základního tónu
+  function stackTones(ch, rootMidi) {
+    let last = rootMidi - 1;
+    return ch.tones.map(t => {
+      let m = rootMidi + T.mod(t.pc - ch.root.pc, 12);
+      while (m <= last) m += 12;
+      last = m;
+      return { n: t, oct: writtenOct(m, t) };
+    });
+  }
+
+  function drawChordSheet(d, ks, xStart) {
+    const src = state.sheet || lastScaleChords;
+    const list = src ? src.chords.filter(c => c && c.q && c.tones) : [];
+    $("chordSheetTitle").textContent = state.sheet ? "Postup: " + state.sheet.title : (src ? src.title : "Akordy");
+    $("bSheetBack").hidden = !state.sheet;
+    if (!list.length) { $("chordSheet").innerHTML = ""; return; }
+    const gap = list.length > 8 ? 62 : 74;
+    const label = c => chordName(c);
+    let svg, W, H;
+    if (state.inst === "piano") {
+      const rh = list.map((c, i) => ({ id: "sc" + i, above: label(c),
+        notes: stackTones(c, 12 * 5 + T.LETTER_PC[c.root.letter] + c.root.acc) }));
+      const lh = list.map((c, i) => {
+        const oct = c.root.letter >= 3 ? 3 : 4;      // F–H o oktávu níž, ať se basa vejde do osnovy
+        const m = 12 * oct + T.LETTER_PC[c.root.letter] + c.root.acc;
+        return { id: "scL" + i, below: c.roman || "", notes: [{ n: c.root, oct: writtenOct(m, c.root) }] };
+      });
+      const probeT = chordStaff("treble", 500, ks, rh, xStart, gap), probeB = chordStaff("bass", 500, ks, lh, xStart, gap);
+      const topT = probeT.above + 4, topB = topT + 4 * LG + probeT.below + probeB.above;
+      const a = chordStaff("treble", topT, ks, rh, xStart, gap), b = chordStaff("bass", topB, ks, lh, xStart, gap);
+      const brace = `<path d="M4 ${topT} C -6 ${topT + 20}, 6 ${(topT + topB + 40) / 2 - 12}, -2 ${(topT + topB + 40) / 2} C 6 ${(topT + topB + 40) / 2 + 12}, -6 ${topB + 20}, 4 ${topB + 40}" fill="none" stroke="${INK}" stroke-width="2.4"/>` +
+        `<line x1="8" y1="${topT}" x2="8" y2="${topB + 4 * LG}" stroke="${INK}" stroke-width="1.4"/>`;
+      svg = brace + a.svg + b.svg;
+      W = xStart + list.length * gap + 20; H = topB + 4 * LG + probeB.below;
+    } else {
+      const ch = list.map((c, i) => {
+        const g = T.guitarChord(c);
+        let notes;
+        if (g) {
+          notes = g.frets.map((f, st) => f < 0 ? null : T.GUITAR.open[st] + f).filter(m => m !== null).map(m => {
+            const t = c.tones.find(x => x.pc === m % 12);
+            return { n: t, oct: writtenOct(m + 12, t) };
+          });
+        } else notes = stackTones(c, 12 * 4 + T.LETTER_PC[c.root.letter] + c.root.acc).map(x => ({ n: x.n, oct: x.oct + 1 }));
+        return { id: "sc" + i, above: label(c), below: c.roman || (g ? "" : "(jiný hmat)"), notes };
+      });
+      const probe = chordStaff("treble", 500, ks, ch, xStart, gap, { octaveDown: true });
+      const top = probe.above + 4;
+      svg = chordStaff("treble", top, ks, ch, xStart, gap, { octaveDown: true }).svg;
+      W = xStart + list.length * gap + 20; H = top + 4 * LG + probe.below;
+    }
+    $("chordSheet").innerHTML = `<svg xmlns="${SVGNS}" viewBox="0 0 ${W + 10} ${H}" style="min-width:${Math.min(W, 900)}px"><g transform="translate(10 0)">${svg}</g></svg>`;
+  }
+
   function drawNotation(d) {
     const ks = T.keySignature(d.r, state.scale);
     const nameOf = n => N(n);
@@ -432,6 +550,35 @@
         `(proto „8“ pod houslovým klíčem). V tabulatuře je nahoře nejtenčí struna, čísla jsou pražce.`;
     }
     $("sheet").innerHTML = `<svg xmlns="${SVGNS}" viewBox="0 0 ${W + 10} ${H}" style="min-width:${Math.min(W, 900)}px"><g transform="translate(10 0)">${svg}</g></svg>`;
+    drawChordSheet(d, ks, xStart);
+  }
+
+  // ------------------------------------------------------------- kytarový hmat (diagram)
+  function chordBox(ch) {
+    const g = T.guitarChord(ch);
+    if (!g) return `<div class="nobox">hmat –</div>`;
+    const W = 74, H = 88, X0 = 14, SX = 9.6, Y0 = 20, SY = 13, ROWS = 5;
+    const fretted = g.frets.filter(f => f > 0);
+    const base = g.open || Math.max(...fretted) <= 4 ? 1 : Math.min(...fretted);
+    let s = `<rect x="1" y="1" width="${W - 2}" height="${H - 2}" rx="6" fill="#fbf6ea"/>`;
+    for (let i = 0; i < 6; i++) s += `<line x1="${X0 + i * SX}" y1="${Y0}" x2="${X0 + i * SX}" y2="${Y0 + ROWS * SY}" stroke="#2a2420" stroke-width="1"/>`;
+    for (let r = 0; r <= ROWS; r++) s += `<line x1="${X0}" y1="${Y0 + r * SY}" x2="${X0 + 5 * SX}" y2="${Y0 + r * SY}" stroke="#2a2420" stroke-width="${r === 0 && base === 1 ? 3.5 : 1}"/>`;
+    if (base > 1) s += `<text x="${X0 - 4}" y="${Y0 + SY * 0.75}" text-anchor="end" font-family="EB Garamond,Georgia,serif" font-size="10" font-weight="700" fill="#2a2420">${base}</text>`;
+    if (g.barre) {
+      const strs = g.frets.map((f, i) => f === g.barre ? i : -1).filter(i => i >= 0);
+      const y = Y0 + (g.barre - base + 0.5) * SY;
+      s += `<rect x="${X0 + strs[0] * SX - 4}" y="${y - 4}" width="${(strs[strs.length - 1] - strs[0]) * SX + 8}" height="8" rx="4" fill="#2a2420"/>`;
+    }
+    g.frets.forEach((f, i) => {
+      const x = X0 + i * SX;
+      if (f < 0) s += `<text x="${x}" y="${Y0 - 5}" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="#2a2420">×</text>`;
+      else if (f === 0) s += `<circle cx="${x}" cy="${Y0 - 8}" r="3" fill="none" stroke="#2a2420" stroke-width="1.1"/>`;
+      else {
+        const isRoot = (T.GUITAR.open[i] + f) % 12 === ch.root.pc;
+        s += `<circle cx="${x}" cy="${Y0 + (f - base + 0.5) * SY}" r="4.3" fill="${isRoot ? "#b5552a" : "#2a2420"}"/>`;
+      }
+    });
+    return `<svg class="cbox" viewBox="0 0 ${W} ${H}" aria-hidden="true">${s}</svg>`;
   }
 
   // ------------------------------------------------------------- tóny a akordy
@@ -475,7 +622,7 @@
     // akordy
     let chords = [], title = "Akordy ve stupnici", fnNames = null;
     if (sc.steps.length === 7) {
-      chords = T.diatonicChords(d.r, state.scale, state.sevenths);
+      chords = T.diatonicChords(d.r, state.scale, state.chordSize);
       if (["major", "minor", "harmonic"].includes(state.scale)) fnNames = { T: "tónika", S: "subdominanta", D: "dominanta" };
     } else if (state.scale === "blues") {
       title = "Bluesové akordy";
@@ -485,7 +632,7 @@
     } else {
       const home = T.ideas(d.r, state.scale, state.cz).home;
       title = `Akordy z tóniny ${KEY(home.root, home.scaleId)}`;
-      chords = T.diatonicChords(home.root, home.scaleId, state.sevenths);
+      chords = T.diatonicChords(home.root, home.scaleId, state.chordSize);
     }
     $("chordsTitle").textContent = title;
     $("chordSeg").hidden = state.scale === "blues";
@@ -493,12 +640,15 @@
       const fn = fnNames && c.degree !== undefined ? fnNames[T.FUNC[c.degree]] : "";
       return `<button class="chord" data-id="${c.root.pc + chordName(c)}" title="${esc(c.q ? c.q.name : "")}">` +
         `<span class="rn">${esc(c.roman)}</span><span class="sym">${esc(chordName(c))}</span>` +
-        (fn ? `<span class="fn">${fn}</span>` : "") + `</button>`;
+        (fn ? `<span class="fn">${fn}</span>` : "") + (state.inst === "guitar" ? chordBox(c) : "") + `</button>`;
     }).join("");
+    $("chords").classList.toggle("withbox", state.inst === "guitar");
     $("chords").querySelectorAll(".chord").forEach((b, i) => b.addEventListener("click", () => {
       const on = b.classList.contains("on");
       setChord(on ? null : chords[i], !on);
+      if (!on) flash("sc" + i);
     }));
+    lastScaleChords = { title: title, chords };
     setChord(null, false);
   }
 
@@ -577,7 +727,10 @@
         if (playingItem) playingItem.classList.remove("playing");
         playingItem = box; box.classList.add("playing");
         const list = it.steps.map(ch => chordMidis(ch).map(m => m + (state.inst === "piano" ? 12 : 0)));
-        S.progression(state.inst, list, Math.max(60, state.tempo - 20), i => setChord(it.steps[i], false),
+        state.sheet = { title: `${it.label}${it.sub ? " – " + it.sub : ""}`, chords: it.steps };
+        drawNotation(data());
+        $("sheet").scrollIntoView({ behavior: "smooth", block: "center" });
+        S.progression(state.inst, list, Math.max(60, state.tempo - 20), i => { setChord(it.steps[i], false); flash("sc" + i); },
           () => { box.classList.remove("playing"); playingItem = null; });
       }
     }));
@@ -605,7 +758,7 @@
     bindSeg("nameSeg", state.cz ? "cz" : "int", v => { state.cz = v === "cz"; render(); });
     bindSeg("handSeg", state.hand, v => { state.hand = v; drawInstrument(); save(); });
     bindSeg("labelSeg", state.label, v => { state.label = v; drawInstrument(); save(); });
-    bindSeg("chordSeg", state.sevenths ? "1" : "0", v => { state.sevenths = v === "1"; drawScaleCard(data()); save(); });
+    bindSeg("chordSeg", String(state.chordSize), v => { state.chordSize = +v; state.sheet = null; drawScaleCard(data()); drawNotation(data()); save(); });
     $("scaleSel").value = state.scale;
     $("roots").innerHTML = Array.from({ length: 12 }, (_, pc) => {
       const best = T.bestRoot(pc, state.scale);
@@ -650,6 +803,7 @@
     });
   };
   $("bStop").onclick = () => { S.stop(); if (playingItem) { playingItem.classList.remove("playing"); playingItem = null; } };
+  $("bSheetBack").onclick = () => { state.sheet = null; drawNotation(data()); };
   $("tempo").oninput = e => { state.tempo = +e.target.value; $("tempoV").textContent = state.tempo + " BPM"; save(); };
   window.addEventListener("hashchange", () => { load(); render(); });
   render();

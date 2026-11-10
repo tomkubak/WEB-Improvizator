@@ -96,3 +96,26 @@ const ks = (pc, id) => { const k = T.keySignature(T.bestRoot(pc, id), id); retur
 eq([ks(0,"major"), ks(7,"major"), ks(5,"major"), ks(9,"minor"), ks(2,"dorian"), ks(3,"minor"), ks(6,"major"), ks(4,"phrygian"), ks(9,"harmonic"), ks(9,"pentaMinor")],
    ["0b","1#","1b","0b","0b","6b","6#","0b","0b","0b"], "předznamenání");
 log((fails ? "SELHALO " + fails : "OK") + " (" + checks + " kontrol, po předznamenání)");
+// --- nónové akordy a kytarové hmaty
+const nine = T.diatonicChords(T.bestRoot(0, "major"), "major", 5).map(c => T.chordSymbol(c.root, c.q, true));
+eq(nine, ["Cmaj9","Dm9","Em7♭9","Fmaj9","G9","Am9","Hm7♭5♭9"], "C dur nónové");
+let shapes = 0, noShape = [];
+for (const sc of T.SCALES) for (let pc = 0; pc < 12; pc++) for (const size of [3, 4, 5]) {
+  for (const c of T.diatonicChords(T.bestRoot(pc, sc.id), sc.id, size)) {
+    checks++;
+    if (!c.q) { fails++; log("FAIL bez názvu " + sc.id + " " + pc + " " + size); continue; }
+    const g = T.guitarChord(c);
+    if (!g) { if (size < 5 && !noShape.includes(c.q.sym)) noShape.push(c.q.sym); continue; }
+    shapes++;
+    const played = g.frets.map((f, s) => f < 0 ? null : T.GUITAR.open[s] + f).filter(x => x !== null);
+    const pcs = c.tones.map(t => t.pc), sounding = played.map(m => m % 12);
+    const bad = sounding.filter(p => !pcs.includes(p));
+    if (bad.length) { fails++; log("FAIL hmat cizí tón " + T.chordSymbol(c.root, c.q, true) + " " + g.frets); }
+    if (Math.min(...played) % 12 !== c.root.pc) { fails++; log("FAIL hmat bas " + T.chordSymbol(c.root, c.q, true) + " " + g.frets); }
+    const need = [0, 1].concat(c.tones.length >= 4 ? [3] : [], c.tones.length >= 5 ? [4] : []);   // základ, tercie, septima, nóna
+    for (const k of need) if (!sounding.includes(pcs[k])) { fails++; log("FAIL hmat chybí " + k + " " + T.chordSymbol(c.root, c.q, true) + " " + g.frets); break; }
+    if (Math.max(...g.frets) > 15) { fails++; log("FAIL hmat vysoko " + T.chordSymbol(c.root, c.q, true) + " " + g.frets); }
+  }
+}
+log("kytarových hmatů ověřeno: " + shapes + ", bez tvaru (3–4 tóny): " + noShape.join(", "));
+log((fails ? "SELHALO " + fails : "OK") + " (" + checks + " kontrol, po hmatech)");

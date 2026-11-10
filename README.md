@@ -33,8 +33,12 @@ mixolydická, lokrická), frygická dominantní (španělská), pentatonika dur 
 U každé je popsaná nálada a **charakteristický tón**, který jí dává barvu.
 
 ### Akordy
-Akordy ve stupnici (kvintakordy i septakordy) s římskými číslicemi a funkcí (tónika, subdominanta,
-dominanta). Klepnutím akord zazní a jeho tóny se vyznačí na nástroji.
+- Akordy ve stupnici – **kvintakordy, septakordy i nónové** (Cmaj9, Dm9, G9, E7♭9 …) s římskými
+  číslicemi a funkcí (tónika, subdominanta, dominanta). Klepnutím akord zazní a jeho tóny se vyznačí na nástroji.
+- **Kytarové hmaty**: otevřené akordy, kde existují, jinak posuvné barré tvary od struny E nebo A
+  (základní tón je v diagramu měděný). Všechny hmaty jsou v testech ověřené – jen tóny akordu, základ v basu.
+- **Akordy v notách**: klavír na dvojité osnově (akord v pravé ruce, základní tón v levé),
+  kytara přesně podle hmatu. Pustíš-li si postup z nápadů, ukáže se v notách celý a znějící akord se zbarví.
 
 ### Nápady k improvizaci
 - **Modulace do příbuzných tónin** přes společný (pivotní) akord – např. z C dur do G dur:

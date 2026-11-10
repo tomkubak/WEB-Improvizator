@@ -161,6 +161,11 @@ input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;bor
 .chord .fn{display:block;font-size:.78em;color:var(--mut)}
 .chord:hover{border-color:var(--brass)}
 .chord.on{border-color:var(--patina);box-shadow:0 0 0 2px var(--patina-lo),0 0 14px rgba(108,196,176,.45)}
+.chords.withbox{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
+.cbox{display:block;width:74px;height:88px;margin:6px auto 0}
+.nobox{margin-top:6px;font-size:.78em;color:var(--dim)}
+.sheetH{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.sheetH .btn{margin:0}
 .chordinfo{min-height:1.5em;margin-top:12px;color:var(--mut)}
 .chordinfo b{color:var(--patina)}
 

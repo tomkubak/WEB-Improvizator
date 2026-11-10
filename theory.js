@@ -149,6 +149,18 @@
     "3,6,9": { sym: "dim7", rn: "lower", suf: "°7", name: "zmenšený septakord" },
     "3,7,11": { sym: "m(maj7)", rn: "lower", suf: "(maj7)", name: "mollový s velkou septimou" },
     "4,8,11": { sym: "+maj7", rn: "upper", suf: "+maj7", name: "zvětšený s velkou septimou" },
+    // nónové akordy (nóna = sekunda o oktávu výš, mod 12)
+    "4,7,11,2": { sym: "maj9", rn: "upper", suf: "maj9", name: "velký nónový" },
+    "4,7,10,2": { sym: "9", rn: "upper", suf: "9", name: "dominantní nónový" },
+    "3,7,10,2": { sym: "m9", rn: "lower", suf: "9", name: "mollový nónový" },
+    "3,7,10,1": { sym: "m7♭9", rn: "lower", suf: "7♭9", name: "mollový septakord s malou nónou" },
+    "4,7,10,1": { sym: "7♭9", rn: "upper", suf: "7♭9", name: "dominantní s malou nónou" },
+    "3,6,10,1": { sym: "m7♭5♭9", rn: "lower", suf: "ø7♭9", name: "malý zmenšený s malou nónou" },
+    "3,6,10,2": { sym: "m9♭5", rn: "lower", suf: "ø9", name: "malý zmenšený nónový" },
+    "3,7,11,2": { sym: "m(maj9)", rn: "lower", suf: "(maj9)", name: "mollový s velkou septimou a nónou" },
+    "4,8,11,2": { sym: "+maj9", rn: "upper", suf: "+maj9", name: "zvětšený nónový" },
+    "4,7,11,3": { sym: "maj7♯9", rn: "upper", suf: "maj7♯9", name: "velký septakord se zvětšenou nónou" },
+    "3,6,9,1": { sym: "dim7♭9", rn: "lower", suf: "°7♭9", name: "zmenšený septakord s malou nónou" },
   };
   const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII"];
 
@@ -166,15 +178,18 @@
     return (diff < 0 ? "♭".repeat(-diff) : "♯".repeat(diff)) + r + (q && q.suf ? q.suf : "");
   }
 
-  // Diatonické akordy 7tónové stupnice (kvintakordy nebo septakordy).
-  function diatonicChords(rootNote, scaleId, sevenths) {
+  // Diatonické akordy 7tónové stupnice. size: 3 kvintakordy, 4 septakordy, 5 nónové
+  // (kvůli starším voláním i true = septakordy, false = kvintakordy).
+  function diatonicChords(rootNote, scaleId, size) {
     const sc = SCALE[scaleId];
     const notes = spell(rootNote, sc);
     if (notes.length !== 7) return [];
-    return notes.map((n, i) => {
-      const tones = [0, 2, 4].concat(sevenths ? [6] : []).map(k => notes[(i + k) % 7]);
-      const q = chordQuality(n.pc, tones.map(t => t.pc));
-      return { degree: i, root: n, tones, q, roman: roman(notes[0], n, i, q) };
+    const n = size === true ? 4 : !size ? 3 : size;
+    return notes.map((root, i) => {
+      const n_ = root;
+      const tones = [0, 2, 4, 6, 8].slice(0, n).map(k => notes[(i + k) % 7]);
+      const q = chordQuality(n_.pc, tones.map(t => t.pc));
+      return { degree: i, root: n_, tones, q, roman: roman(notes[0], n_, i, q) };
     });
   }
 
@@ -514,6 +529,48 @@
     });
   }
 
+  // ---------------------------------------------------------------- kytara – hmaty akordů
+  // Otevřené akordy (pražce od struny E po e, -1 = nehrát). Klíč: "tónina:značka".
+  const OPEN_CHORDS = {
+    "0:": [-1, 3, 2, 0, 1, 0], "2:": [-1, -1, 0, 2, 3, 2], "4:": [0, 2, 2, 1, 0, 0], "7:": [3, 2, 0, 0, 0, 3], "9:": [-1, 0, 2, 2, 2, 0],
+    "9:m": [-1, 0, 2, 2, 1, 0], "2:m": [-1, -1, 0, 2, 3, 1], "4:m": [0, 2, 2, 0, 0, 0],
+    "0:7": [-1, 3, 2, 3, 1, 0], "2:7": [-1, -1, 0, 2, 1, 2], "4:7": [0, 2, 0, 1, 0, 0], "7:7": [3, 2, 0, 0, 0, 1], "9:7": [-1, 0, 2, 0, 2, 0], "11:7": [-1, 2, 1, 2, 0, 2],
+    "9:m7": [-1, 0, 2, 0, 1, 0], "2:m7": [-1, -1, 0, 2, 1, 1], "4:m7": [0, 2, 0, 0, 0, 0],
+    "0:maj7": [-1, 3, 2, 0, 0, 0], "2:maj7": [-1, -1, 0, 2, 2, 2], "4:maj7": [0, 2, 1, 1, 0, 0], "5:maj7": [-1, -1, 3, 2, 1, 0],
+    "7:maj7": [3, 2, 0, 0, 0, 2], "9:maj7": [-1, 0, 2, 1, 2, 0],
+  };
+  // Posuvné tvary: posun proti pražci základního tónu na struně E (index 0) nebo A (index 1); null = nehrát.
+  const SHAPES = {
+    E: { "": [0, 2, 2, 1, 0, 0], "m": [0, 2, 2, 0, 0, 0], "7": [0, 2, 0, 1, 0, 0], "m7": [0, 2, 0, 0, 0, 0],
+         "maj7": [0, null, 1, 1, 0, null], "m7♭5": [0, null, 0, 0, -1, null], "dim7": [0, null, -1, 0, -1, null],
+         "m(maj7)": [0, null, 1, 0, 0, null], "+maj7": [0, null, 1, 1, 1, null] },
+    A: { "": [null, 0, 2, 2, 2, 0], "m": [null, 0, 2, 2, 1, 0], "7": [null, 0, 2, 0, 2, 0], "m7": [null, 0, 2, 0, 1, 0],
+         "maj7": [null, 0, 2, 1, 2, 0], "m7♭5": [null, 0, 1, 0, 1, null], "dim7": [null, 0, 1, -1, 1, null],
+         "dim": [null, 0, 1, 2, 1, null], "+": [null, 0, -1, -2, -2, null], "m(maj7)": [null, 0, 2, 1, 1, 0],
+         "9": [null, 0, -1, 0, 0, 0], "maj9": [null, 0, -1, 1, 0, null], "m9": [null, 0, -2, 0, 0, null],
+         "7♭9": [null, 0, -1, 0, -1, null] },
+  };
+  // Hmat akordu: { frets: [6], barre: pražec | 0, open: bool } nebo null (tvar neznám).
+  function guitarChord(ch) {
+    if (!ch || !ch.q) return null;
+    const sym = ch.q.sym;
+    const open = OPEN_CHORDS[ch.root.pc + ":" + sym];
+    if (open) return { frets: open.slice(), barre: 0, open: true };
+    let best = null;
+    [["E", 0], ["A", 1]].forEach(([name, st]) => {
+      const tpl = SHAPES[name][sym];
+      if (!tpl) return;
+      let r = mod(ch.root.pc - GUITAR.open[st], 12);
+      const offs = tpl.filter(o => o !== null);
+      if (r + Math.min(...offs) < 1) r += 12;               // posuvný tvar bez prázdných strun
+      const frets = tpl.map(o => o === null ? -1 : r + o);
+      const atR = tpl.filter(o => o === 0).length;
+      const cand = { frets, barre: atR >= 3 ? r : 0, open: false, r };
+      if (!best || r < best.r) best = cand;
+    });
+    return best;
+  }
+
   // Polohy: 7tónové -> 3 tóny na strunu (7 poloh), pentatoniky -> 2 tóny na strunu (5 poloh),
   // blues -> pentatonika moll + blue note.
   function guitarPositions(rootNote, scaleId) {
@@ -570,6 +627,6 @@
   root.Theory = {
     LETTERS, LETTER_PC, SCALES, homeKey, keySignature, SCALE, GUITAR, isBlack, mod,
     noteOf, czName, intName, noteName, spell, bestRoot, rootSpellings, formula, keyName,
-    diatonicChords, chordSymbol, FUNC, ideas, pianoFingering, guitarPositions, transposeNote, QUAL,
+    diatonicChords, chordSymbol, guitarChord, FUNC, ideas, pianoFingering, guitarPositions, transposeNote, QUAL,
   };
 })(typeof window !== "undefined" ? window : globalThis);

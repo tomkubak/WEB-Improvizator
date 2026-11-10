@@ -9,7 +9,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23c9a35a' d='M10.3 1h3.4l.5 2.9 1.8.8 2.4-1.7 2.4 2.4-1.7 2.4.8 1.8 2.9.5v3.4l-2.9.5-.8 1.8 1.7 2.4-2.4 2.4-2.4-1.7-1.8.8-.5 2.9h-3.4l-.5-2.9-1.8-.8-2.4 1.7-2.4-2.4 1.7-2.4-.8-1.8L1 13.7v-3.4l2.9-.5.8-1.8L3 5.6 5.4 3.2l2.4 1.7 1.8-.8zM12 8a4 4 0 100 8 4 4 0 000-8z'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Noto+Music&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap">
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 <div class="wrap">
@@ -91,6 +91,10 @@
   <h2><span><span class="ic"></span>Noty</span><small id="notesSub"></small></h2>
   <div class="sheet" id="sheet"></div>
   <p class="muted" id="sheetHelp"></p>
+  <h3 class="sheetH"><span id="chordSheetTitle">Akordy</span><button class="btn small sec" id="bSheetBack" hidden>← akordy stupnice</button></h3>
+  <div class="sheet" id="chordSheet"></div>
+  <p class="muted">Nad akordy je jejich značka, pod nimi stupeň v tónině. U kytary jsou noty přesně podle hmatu.
+    Když si v nápadech pustíš postup (▶), objeví se tady jeho akordy a znějící akord se zbarví.</p>
 </section>
 
 <div class="cols">
@@ -100,7 +104,7 @@
     <p class="mood" id="mood"></p>
     <h3 id="chordsTitle">Akordy ve stupnici</h3>
     <div class="seg" id="chordSeg" style="margin-bottom:12px">
-      <button data-v="0">Kvintakordy</button><button data-v="1">Septakordy</button>
+      <button data-v="3">Kvintakordy</button><button data-v="4">Septakordy</button><button data-v="5">Nónové</button>
     </div>
     <div class="chords" id="chords"></div>
     <p class="chordinfo" id="chordInfo"></p>
@@ -126,8 +130,8 @@
 </div>
 <div id="toast"></div>
 
-<script src="theory.js?v=3"></script>
-<script src="audio.js?v=3"></script>
-<script src="app.js?v=3"></script>
+<script src="theory.js?v=4"></script>
+<script src="audio.js?v=4"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>
