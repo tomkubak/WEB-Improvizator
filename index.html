@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#1a110a">
+<title>Improvizátor – stupnice, prstoklady a modulace pro klavír a kytaru</title>
+<meta name="description" content="Prstoklady stupnic pro klavír a kytaru, akordy ve stupnici a nápady na modulace a improvizaci. Česky, zdarma, bez reklam.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23c9a35a' d='M10.3 1h3.4l.5 2.9 1.8.8 2.4-1.7 2.4 2.4-1.7 2.4.8 1.8 2.9.5v3.4l-2.9.5-.8 1.8 1.7 2.4-2.4 2.4-2.4-1.7-1.8.8-.5 2.9h-3.4l-.5-2.9-1.8-.8-2.4 1.7-2.4-2.4 1.7-2.4-.8-1.8L1 13.7v-3.4l2.9-.5.8-1.8L3 5.6 5.4 3.2l2.4 1.7 1.8-.8zM12 8a4 4 0 100 8 4 4 0 000-8z'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
+    <defs><radialGradient id="lg" cx=".35" cy=".3"><stop offset="0" stop-color="#fff3c8"/><stop offset=".45" stop-color="#c9a35a"/><stop offset="1" stop-color="#7a5a26"/></radialGradient></defs>
+    <path fill="url(#lg)" d="M27.5 2h9l1.3 7.7 4.8 2 6.4-4.5 6.4 6.4-4.5 6.4 2 4.8 7.7 1.3v9l-7.7 1.3-2 4.8 4.5 6.4-6.4 6.4-6.4-4.5-4.8 2-1.3 7.7h-9l-1.3-7.7-4.8-2-6.4 4.5-6.4-6.4 4.5-6.4-2-4.8L2 36.5v-9l7.7-1.3 2-4.8-4.5-6.4 6.4-6.4 6.4 4.5 4.8-2z"/>
+    <circle cx="32" cy="32" r="17" fill="#1d130b" stroke="#3b2810" stroke-width="2"/>
+    <path fill="#ffb35c" d="M36 18v17.5a5 5 0 1 1-2.6-4.4V22l-8 2v14.5a5 5 0 1 1-2.6-4.4V21.3z" style="filter:drop-shadow(0 0 3px #ff7a1a)"/>
+  </svg>
+  <h1>Improvizátor<small>stupnice · prstoklady · modulace</small></h1>
+  <div class="gears" aria-hidden="true">
+    <svg class="g1" viewBox="0 0 24 24"><path d="M10.3 1h3.4l.5 2.9 1.8.8 2.4-1.7 2.4 2.4-1.7 2.4.8 1.8 2.9.5v3.4l-2.9.5-.8 1.8 1.7 2.4-2.4 2.4-2.4-1.7-1.8.8-.5 2.9h-3.4l-.5-2.9-1.8-.8-2.4 1.7-2.4-2.4 1.7-2.4-.8-1.8L1 13.7v-3.4l2.9-.5.8-1.8L3 5.6 5.4 3.2l2.4 1.7 1.8-.8zM12 8a4 4 0 100 8 4 4 0 000-8z"/></svg>
+    <svg class="g2" viewBox="0 0 24 24"><path d="M10.3 1h3.4l.5 2.9 1.8.8 2.4-1.7 2.4 2.4-1.7 2.4.8 1.8 2.9.5v3.4l-2.9.5-.8 1.8 1.7 2.4-2.4 2.4-2.4-1.7-1.8.8-.5 2.9h-3.4l-.5-2.9-1.8-.8-2.4 1.7-2.4-2.4 1.7-2.4-.8-1.8L1 13.7v-3.4l2.9-.5.8-1.8L3 5.6 5.4 3.2l2.4 1.7 1.8-.8zM12 8a4 4 0 100 8 4 4 0 000-8z"/></svg>
+  </div>
+</header>
+
+<section class="card">
+  <h2><span><span class="ic"></span>Ovládací pult</span><small>vyber nástroj, tóniku a stupnici</small></h2>
+  <div class="ctl-grid">
+    <div>
+      <span class="lbl">Nástroj</span>
+      <div class="seg" id="instSeg">
+        <button data-v="piano"><svg viewBox="0 0 24 24"><path d="M2 4h20v16H2zm2 2v12h2.5v-5H5.5V6zm4 0v7H7.5v5h3v-5h-1V6zm4 0v7h-1v5h3v-5h-1V6zm4 0v7h-1v5h2.5V6z"/></svg>Klavír</button>
+        <button data-v="guitar"><svg viewBox="0 0 24 24"><path d="M20.5 2.1l1.4 1.4-1.8 1.8.6.6-1.4 1.4-.6-.6-3.9 3.9c.9 1.6.6 3.5-.6 4.6-.8.8-1.9 1-2.8 1-.2 1.3-.7 2.5-1.6 3.4-2.2 2.2-5.6 2.4-7.4.6s-1.6-5.2.6-7.4c.9-.9 2.1-1.4 3.4-1.6 0-.9.2-2 1-2.8 1.1-1.2 3-1.5 4.6-.6l3.9-3.9-.6-.6L17 3.9l.6.6zM7.3 13.3a1.7 1.7 0 1 0 2.4 2.4 1.7 1.7 0 0 0-2.4-2.4z"/></svg>Kytara</button>
+      </div>
+    </div>
+    <div>
+      <span class="lbl">Stupnice</span>
+      <select id="scaleSel" aria-label="Stupnice"></select>
+    </div>
+    <div>
+      <span class="lbl">Názvy tónů</span>
+      <div class="seg" id="nameSeg">
+        <button data-v="cz" title="Česky: H a B (= B♭), Fis, Es …">Česky (H, B)</button>
+        <button data-v="int" title="Mezinárodně: B a B♭, F♯, E♭ …">Mezinár. (B, B♭)</button>
+      </div>
+    </div>
+  </div>
+  <span class="lbl" style="margin-top:18px">Tónika</span>
+  <div class="roots" id="roots"></div>
+  <div class="enh" id="enh"></div>
+</section>
+
+<section class="card">
+  <h2><span><span class="ic"></span><span id="instTitle">Klavír</span></span><small id="instSub"></small></h2>
+  <div class="opts" id="pianoOpts">
+    <div>
+      <span class="lbl">Prstoklad</span>
+      <div class="seg" id="handSeg">
+        <button data-v="R">Pravá ruka</button><button data-v="L">Levá ruka</button><button data-v="B">Obě ruce</button>
+      </div>
+    </div>
+  </div>
+  <div class="opts" id="guitarOpts">
+    <div>
+      <span class="lbl">Poloha na hmatníku</span>
+      <div class="seg" id="posSeg"></div>
+    </div>
+    <div>
+      <span class="lbl">Popisky</span>
+      <div class="seg" id="labelSeg">
+        <button data-v="finger">Prsty</button><button data-v="name">Tóny</button><button data-v="degree">Stupně</button>
+      </div>
+    </div>
+  </div>
+  <div class="stage" id="stage"></div>
+  <div class="legend" id="legend"></div>
+  <div class="play">
+    <button class="btn" id="bPlay">▶ Přehrát stupnici</button>
+    <button class="btn sec" id="bStop">■ Stop</button>
+    <label class="tempo">Tempo <input type="range" id="tempo" min="50" max="220" step="5"> <b id="tempoV"></b></label>
+  </div>
+  <p class="muted" id="instHelp"></p>
+</section>
+
+<div class="cols">
+  <section class="card">
+    <h2><span><span class="ic"></span>Tóny a akordy</span><small id="scaleSub"></small></h2>
+    <div class="tubes" id="tubes"></div>
+    <p class="mood" id="mood"></p>
+    <h3 id="chordsTitle">Akordy ve stupnici</h3>
+    <div class="seg" id="chordSeg" style="margin-bottom:12px">
+      <button data-v="0">Kvintakordy</button><button data-v="1">Septakordy</button>
+    </div>
+    <div class="chords" id="chords"></div>
+    <p class="chordinfo" id="chordInfo"></p>
+  </section>
+
+  <section class="card circle">
+    <h2><span><span class="ic"></span>Kvintový kruh</span><small>klikni na tóninu</small></h2>
+    <div id="circle"></div>
+    <p class="muted">Sousední tóniny se liší jediným tónem – proto se mezi nimi moduluje nejsnáz.
+      Vnější kruh dur, vnitřní paralelní moll. Zvýrazněné jsou tvá tónina a její nejbližší příbuzné.</p>
+  </section>
+</div>
+
+<section class="card ideas">
+  <h2><span><span class="ic"></span>Nápady k improvizaci</span><small id="ideasSub"></small></h2>
+  <p class="muted">Každý nápad si můžeš pustit (▶) a nad ním zkoušet hrát, nebo se do nové stupnice rovnou přepnout (→).</p>
+  <div id="ideas"></div>
+</section>
+
+<footer>
+  Improvizátor · zvuk se generuje přímo v prohlížeči · <a href="https://github.com/tomkubak/WEB-Improvizator">zdrojový kód na GitHubu</a>
+</footer>
+</div>
+<div id="toast"></div>
+
+<script src="theory.js?v=1"></script>
+<script src="audio.js?v=1"></script>
+<script src="app.js?v=1"></script>
+</body>
+</html>
