@@ -237,6 +237,29 @@
     return out;
   }
 
+  // Nadřazená tónina (dur/moll), ze které vychází harmonie i předznamenání:
+  // církevní mód -> rodičovská durová stupnice, pentatonika dur -> dur, ostatní -> moll na stejném tónu.
+  function homeKey(rootNote, scaleId) {
+    const sc = SCALE[scaleId];
+    if (sc.mode !== undefined && sc.mode !== 0 && sc.mode !== 5)
+      return { root: cleanKeyRoot(transposeNote(rootNote, -sc.mode, -MAJOR[sc.mode]), "major"), scaleId: "major" };
+    if (scaleId === "major" || scaleId === "pentaMajor") return { root: rootNote, scaleId: "major" };
+    return { root: rootNote, scaleId: "minor" };
+  }
+
+  // Předznamenání: počet ♯/♭, pořadí písmen a posuvka každého písmene podle předznamenání.
+  const SHARP_ORDER = [3, 0, 4, 1, 5, 2, 6];   // F C G D A E H
+  const FLAT_ORDER = [6, 2, 5, 1, 4, 0, 3];    // B E A D G C F
+  function keySignature(rootNote, scaleId) {
+    const home = homeKey(rootNote, scaleId);
+    const maj = home.scaleId === "major" ? home.root : cleanKeyRoot(transposeNote(home.root, 2, 3), "major");
+    const notes = spell(maj, SCALE.major);
+    const sharps = notes.filter(n => n.acc > 0).length, flats = notes.filter(n => n.acc < 0).length;
+    const acc = [0, 0, 0, 0, 0, 0, 0];
+    notes.forEach(n => acc[n.letter] = n.acc);
+    return { sharps, flats, order: sharps ? SHARP_ORDER.slice(0, sharps) : FLAT_ORDER.slice(0, flats), acc, home };
+  }
+
   // ---------------------------------------------------------------- nápady
   // Vrátí sekce nápadů pro zvolenou stupnici: [{ title, intro, items: [...] }]
   // item = { label, text, steps?: [akordy], go?: {root, scaleId} }
@@ -247,14 +270,7 @@
     const C = ch => chordSymbol(ch.root, ch.q, czech);
     const sections = [];
 
-    // nadřazená tónina (dur/moll), ze které vychází harmonie
-    let home;
-    if (sc.mode !== undefined && sc.mode !== 0 && sc.mode !== 5) {
-      // církevní mód: rodičovská durová stupnice
-      const majRoot = cleanKeyRoot(transposeNote(rootNote, -sc.mode, -MAJOR[sc.mode]), "major");
-      home = { root: majRoot, scaleId: "major" };
-    } else if (scaleId === "major" || scaleId === "pentaMajor") home = { root: rootNote, scaleId: "major" };
-    else home = { root: rootNote, scaleId: "minor" };
+    const home = homeKey(rootNote, scaleId);
     const homeIsMajor = home.scaleId === "major";
 
     // --- 1) Modulace do příbuzných tónin (přes společný akord)
@@ -552,7 +568,7 @@
   }
 
   root.Theory = {
-    LETTERS, SCALES, SCALE, GUITAR, isBlack, mod,
+    LETTERS, LETTER_PC, SCALES, homeKey, keySignature, SCALE, GUITAR, isBlack, mod,
     noteOf, czName, intName, noteName, spell, bestRoot, rootSpellings, formula, keyName,
     diatonicChords, chordSymbol, FUNC, ideas, pianoFingering, guitarPositions, transposeNote, QUAL,
   };

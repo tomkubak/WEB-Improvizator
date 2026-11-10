@@ -283,7 +283,7 @@
     if (state.inst === "piano") {
       const oct = drawPiano(d);
       const up = oct.map(m => ({ m: m + 12, id: "k" + m, pc: m % 12 }));
-      current = { inst: "piano", seq: up.concat(up.slice(0, -1).reverse()) };
+      current = { inst: "piano", seq: up.concat(up.slice(0, -1).reverse()), n: up.length };
     } else {
       const p = drawGuitar(d);
       const byM = new Map();
@@ -292,8 +292,146 @@
         if (!byM.has(m)) byM.set(m, { m, id: `g${n.string}-${n.fret}`, pc: n.pc });
       });
       const up = [...byM.values()].sort((a, b) => a.m - b.m);
-      current = { inst: "guitar", seq: up.concat(up.slice(0, -1).reverse()) };
+      current = { inst: "guitar", seq: up.concat(up.slice(0, -1).reverse()), n: up.length };
     }
+    drawNotation(d);
+  }
+
+
+  // ------------------------------------------------------------- NOTY (černé na bílém)
+  const MUSIC_FONT = `"Noto Music","Bravura","Apple Symbols","Segoe UI Symbol",serif`;
+  const ACC_GLYPH = { "-2": "\u{1D12B}", "-1": "♭", "0": "♮", "1": "♯", "2": "\u{1D12A}" };
+  const INK = "#141414";
+  const LG = 10;                                       // rozestup linek osnovy
+  // diatonický index tónu (oktáva * 7 + písmeno); spodní linka: E4 (houslový), G2 (basový)
+  const BOTTOM = { treble: 4 * 7 + 2, bass: 2 * 7 + 4 };
+  const KS_POS = { sharp: [38, 35, 39, 36, 33, 37, 34], flat: [34, 37, 33, 36, 32, 35, 31] };   // houslový klíč
+
+  // Psaná oktáva tónu z MIDI čísla (Ces5 = H4 zní stejně, ale píše se jinak).
+  const writtenOct = (midi, n) => (midi - T.LETTER_PC[n.letter] - n.acc) / 12 - 1;
+
+  // Jedna osnova: vrací SVG. notes = [{ n, oct, id, above, below }]
+  function staff(clef, top, ks, notes, xStart, gap, extra) {
+    const bottomY = top + 4 * LG;
+    const yOf = pos => bottomY - (pos - BOTTOM[clef]) * LG / 2;
+    let s = "";
+    const xEnd = xStart + notes.length * gap + 4;
+    for (let i = 0; i < 5; i++) s += `<line x1="8" y1="${top + i * LG}" x2="${xEnd}" y2="${top + i * LG}" stroke="${INK}" stroke-width="1"/>`;
+    s += `<line x1="8" y1="${top}" x2="8" y2="${bottomY}" stroke="${INK}" stroke-width="1.2"/>`;
+    s += `<line x1="${xEnd}" y1="${top}" x2="${xEnd}" y2="${bottomY}" stroke="${INK}" stroke-width="1.2"/>` +
+         `<line x1="${xEnd + 4}" y1="${top}" x2="${xEnd + 4}" y2="${bottomY}" stroke="${INK}" stroke-width="3.2"/>`;
+    // klíč
+    if (clef === "treble") {
+      s += `<text x="12" y="${top + 4 * LG}" font-family='${MUSIC_FONT}' font-size="${LG * 4.1}" fill="${INK}">\u{1D11E}</text>`;   // spirála kolem linky g¹
+      if (extra && extra.octaveDown) s += `<text x="25" y="${bottomY + 23}" font-family="EB Garamond,Georgia,serif" font-size="12" font-style="italic" fill="${INK}">8</text>`;
+    } else {
+      s += `<text x="12" y="${top + 3 * LG}" font-family='${MUSIC_FONT}' font-size="${LG * 3.6}" fill="${INK}">\u{1D122}</text>`;   // dvojtečka kolem linky f
+    }
+    // předznamenání
+    const shift = clef === "bass" ? -14 : 0;
+    const kind = ks.sharps ? "sharp" : "flat";
+    ks.order.forEach((_, i) => {
+      const y = yOf(KS_POS[kind][i] + shift);
+      s += `<text x="${50 + i * 11}" y="${y + (kind === "flat" ? 3 : 5)}" font-family='${MUSIC_FONT}' font-size="${LG * 2.3}" fill="${INK}" text-anchor="middle">${kind === "sharp" ? ACC_GLYPH[1] : ACC_GLYPH[-1]}</text>`;
+    });
+    // řady popisků nad a pod osnovou – rovně, nad nejvyšší / pod nejnižší notou
+    const ys = notes.map(nt => yOf(nt.oct * 7 + nt.n.letter));
+    const rowAbove = Math.min(top - 16, ...ys.map(y => y - 42));
+    const rowBelow = Math.max(bottomY + 24, ...ys.map(y => y + 48));
+    // noty
+    const measure = new Map();
+    notes.forEach((nt, i) => {
+      const x = xStart + i * gap + gap / 2, pos = nt.oct * 7 + nt.n.letter, y = yOf(pos), rel = pos - BOTTOM[clef];
+      let g = `<g id="${nt.id}">`;
+      for (let q = -2; q >= rel; q -= 2) g += `<line x1="${x - 10}" y1="${yOf(BOTTOM[clef] + q)}" x2="${x + 10}" y2="${yOf(BOTTOM[clef] + q)}" stroke="${INK}" stroke-width="1"/>`;
+      for (let q = 10; q <= rel; q += 2) g += `<line x1="${x - 10}" y1="${yOf(BOTTOM[clef] + q)}" x2="${x + 10}" y2="${yOf(BOTTOM[clef] + q)}" stroke="${INK}" stroke-width="1"/>`;
+      const cur = measure.has(pos) ? measure.get(pos) : ks.acc[nt.n.letter];
+      if (nt.n.acc !== cur) {
+        g += `<text x="${x - 15}" y="${y + (nt.n.acc < 0 ? 3 : 5)}" font-family='${MUSIC_FONT}' font-size="${LG * 2.3}" fill="${INK}" text-anchor="middle">${ACC_GLYPH[nt.n.acc]}</text>`;
+        measure.set(pos, nt.n.acc);
+      }
+      g += `<ellipse cx="${x}" cy="${y}" rx="6.3" ry="4.6" transform="rotate(-20 ${x} ${y})" fill="${INK}"/>`;
+      g += rel < 4 ? `<line x1="${x + 5.6}" y1="${y - 1}" x2="${x + 5.6}" y2="${y - 33}" stroke="${INK}" stroke-width="1.3"/>`
+                   : `<line x1="${x - 5.6}" y1="${y + 1}" x2="${x - 5.6}" y2="${y + 33}" stroke="${INK}" stroke-width="1.3"/>`;
+      if (nt.above !== undefined) g += `<text x="${x}" y="${rowAbove}" text-anchor="middle" font-family="EB Garamond,Georgia,serif" font-weight="700" font-size="15" fill="${INK}">${esc(nt.above)}</text>`;
+      if (nt.below !== undefined) g += `<text x="${x}" y="${rowBelow}" text-anchor="middle" font-family="EB Garamond,Georgia,serif" font-weight="700" font-size="15" fill="${INK}">${esc(nt.below)}</text>`;
+      s += g + `</g>`;
+    });
+    return { svg: s, yOf };
+  }
+
+  // Rozsah svislých poloh not -> kolik místa nad/pod osnovou
+  // Místo nad / pod osnovou pro nejvyšší / nejnižší notu včetně nožičky a řady popisků
+  function staffSpan(clef, notes) {
+    const rel = notes.map(nt => nt.oct * 7 + nt.n.letter - BOTTOM[clef]);
+    const hi = Math.max(...rel), lo = Math.min(...rel);
+    return { above: Math.max(16, (hi - 8) * LG / 2 + 42) + 6, below: Math.max(24, -lo * LG / 2 + 48) + 6 };
+  }
+
+  function drawNotation(d) {
+    const ks = T.keySignature(d.r, state.scale);
+    const nameOf = n => N(n);
+    const xStart = 50 + ks.order.length * 11 + 22;
+    let svg = "", H = 0, W = 0;
+    const ksText = ks.sharps ? `${ks.sharps} ♯` : ks.flats ? `${ks.flats} ♭` : "bez předznamenání";
+    $("notesSub").textContent = `předznamenání ${KEY(ks.home.root, ks.home.scaleId)} (${ksText})`;
+    if (state.inst === "piano") {
+      const pcs = d.notes.map(n => n.pc);
+      const fR = T.pianoFingering(pcs, "R"), fL = T.pianoFingering(pcs, "L");
+      const rootMidi = 12 * 5 + T.LETTER_PC[d.r.letter] + d.r.acc;
+      const seq = d.notes.concat([d.r]).map((n, i) => {
+        const midi = rootMidi + (i === d.notes.length ? 12 : T.mod(n.pc - d.r.pc, 12));
+        return { n, midi };
+      });
+      const gap = 50;
+      const rh = seq.map((x, i) => ({ n: x.n, oct: writtenOct(x.midi, x.n), id: "sn" + i,
+        above: state.hand !== "L" ? fR[i] : undefined, below: nameOf(x.n) }));
+      const lh = seq.map((x, i) => ({ n: x.n, oct: writtenOct(x.midi - 12, x.n), id: "snL" + i,
+        below: state.hand !== "R" ? fL[i] : undefined }));
+      const sr = staffSpan("treble", rh), sl = staffSpan("bass", lh);
+      const topT = 14 + sr.above, topB = topT + 4 * LG + sr.below + 18 + sl.above;
+      const a = staff("treble", topT, ks, rh, xStart, gap), b = staff("bass", topB, ks, lh, xStart, gap);
+      // akoláda spojující obě osnovy
+      const brace = `<line x1="8" y1="${topT}" x2="8" y2="${topB + 4 * LG}" stroke="${INK}" stroke-width="1.4"/>` +
+        `<path d="M4 ${topT} C -6 ${topT + 20}, 6 ${(topT + topB + 40) / 2 - 12}, -2 ${(topT + topB + 40) / 2} C 6 ${(topT + topB + 40) / 2 + 12}, -6 ${topB + 20}, 4 ${topB + 40}" fill="none" stroke="${INK}" stroke-width="2.4"/>`;
+      svg = brace + a.svg + b.svg;
+      W = xStart + rh.length * gap + 16; H = topB + 4 * LG + sl.below + 8;
+      $("sheetHelp").innerHTML = `Nahoře pravá ruka (houslový klíč) s prstoklady, dole levá ruka (basový klíč) o oktávu níž` +
+        (state.hand !== "R" ? " s prstoklady" : "") + `. Pod notami jsou jména tónů.`;
+    } else {
+      const positions = T.guitarPositions(d.r, state.scale);
+      const pos = positions[state.pos >= 0 ? state.pos : 0];
+      const byM = new Map();
+      pos.notes.slice().sort((a, b) => a.string - b.string || a.fret - b.fret).forEach(nt => {
+        const m = T.GUITAR.open[nt.string] + nt.fret;
+        if (!byM.has(m)) byM.set(m, nt);
+      });
+      const list = [...byM.entries()].sort((a, b) => a[0] - b[0]);
+      const gap = 40;
+      const notes = list.map(([m, nt], i) => {
+        const n = d.notes[d.pcIdx.get(nt.pc)];
+        return { n, oct: writtenOct(m + 12, n), id: "sn" + i, below: nameOf(n), tab: nt };   // kytara zní o oktávu níž
+      });
+      const sp = staffSpan("treble", notes);
+      const top = 14 + sp.above;
+      const a = staff("treble", top, ks, notes, xStart, gap, { octaveDown: true });
+      const tabTop = top + 4 * LG + sp.below + 14, TG = 13;
+      let t = "";
+      const xEnd = xStart + notes.length * gap + 4;
+      for (let i = 0; i < 6; i++) t += `<line x1="8" y1="${tabTop + i * TG}" x2="${xEnd}" y2="${tabTop + i * TG}" stroke="${INK}" stroke-width="1"/>`;
+      t += `<line x1="8" y1="${tabTop}" x2="8" y2="${tabTop + 5 * TG}" stroke="${INK}" stroke-width="1.2"/><line x1="${xEnd}" y1="${tabTop}" x2="${xEnd}" y2="${tabTop + 5 * TG}" stroke="${INK}" stroke-width="1.2"/>`;
+      ["T", "A", "B"].forEach((c, i) => t += `<text x="24" y="${tabTop + 19 + i * 19}" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="17" fill="${INK}">${c}</text>`);
+      notes.forEach((nt, i) => {
+        const x = xStart + i * gap + gap / 2, y = tabTop + (5 - nt.tab.string) * TG;
+        t += `<rect x="${x - 8}" y="${y - 7}" width="16" height="14" fill="#fff"/>` +
+             `<text x="${x}" y="${y + 5}" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="14" fill="${INK}">${nt.tab.fret}</text>`;
+      });
+      svg = a.svg + t;
+      W = xEnd + 16; H = tabTop + 5 * TG + 16;
+      $("sheetHelp").innerHTML = `Poloha ${(state.pos >= 0 ? state.pos : 0) + 1} jako noty a tabulatura. Kytara zní o oktávu níž, než se píše ` +
+        `(proto „8“ pod houslovým klíčem). V tabulatuře je nahoře nejtenčí struna, čísla jsou pražce.`;
+    }
+    $("sheet").innerHTML = `<svg xmlns="${SVGNS}" viewBox="0 0 ${W + 10} ${H}" style="min-width:${Math.min(W, 900)}px"><g transform="translate(10 0)">${svg}</g></svg>`;
   }
 
   // ------------------------------------------------------------- tóny a akordy
@@ -504,7 +642,12 @@
   $("bPlay").onclick = () => {
     if (!current) return;
     const seq = current.seq;
-    S.sequence(current.inst, seq.map(x => x.m), state.tempo, i => { flash(seq[i].id); flashTube(seq[i].pc); });
+    const n = current.n;
+    S.sequence(current.inst, seq.map(x => x.m), state.tempo, i => {
+      flash(seq[i].id); flashTube(seq[i].pc);
+      const k = i < n ? i : 2 * n - 2 - i;               // index noty (nahoru i dolů)
+      flash("sn" + k); flash("snL" + k);
+    });
   };
   $("bStop").onclick = () => { S.stop(); if (playingItem) { playingItem.classList.remove("playing"); playingItem = null; } };
   $("tempo").oninput = e => { state.tempo = +e.target.value; $("tempoV").textContent = state.tempo + " BPM"; save(); };

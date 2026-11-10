@@ -20,6 +20,13 @@ jak ji hrát, z jakých akordů se skládá a kam se z ní dá hudebně „utéc
   (7 poloh), pentatoniky dva tóny na strunu (5 „krabic“), bluesová stupnice s blue note.
 - Popisky podle volby: **prsty** (1 = ukazováček … 4 = malíček, 0 = prázdná struna), **tóny** nebo **stupně**.
 
+### Noty
+Stupnice i v klasickém notovém zápisu – černé noty na bílém papíře, s předznamenáním podle tóniny
+a posuvkami jen tam, kde se stupnice od předznamenání liší.
+- **Klavír:** dvojitá osnova (pravá ruka v houslovém, levá v basovém klíči) s prstoklady a jmény tónů.
+- **Kytara:** houslový klíč s osmičkou (kytara zní o oktávu níž) a pod ním **tabulatura** zvolené polohy.
+- Při přehrávání stupnice se právě znějící nota zbarví.
+
 ### Stupnice
 Dur, moll (přirozená, harmonická, melodická), církevní módy (dórská, frygická, lydická,
 mixolydická, lokrická), frygická dominantní (španělská), pentatonika dur a moll, bluesová.

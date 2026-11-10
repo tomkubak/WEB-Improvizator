@@ -91,4 +91,8 @@ for (const sc of T.SCALES) for (let pc = 0; pc < 12; pc++) for (const cz of [tru
 // ukázka
 const id = T.ideas(T.bestRoot(0, "major"), "major", true);
 for (const s of id.sections) { log("## " + s.title); for (const it of s.items.slice(0, 3)) log("  " + it.label + " – " + it.text); }
-log((fails ? "SELHALO " + fails : "OK") + " (" + checks + " kontrol)");
+// --- předznamenání
+const ks = (pc, id) => { const k = T.keySignature(T.bestRoot(pc, id), id); return k.sharps ? k.sharps + "#" : k.flats + "b"; };
+eq([ks(0,"major"), ks(7,"major"), ks(5,"major"), ks(9,"minor"), ks(2,"dorian"), ks(3,"minor"), ks(6,"major"), ks(4,"phrygian"), ks(9,"harmonic"), ks(9,"pentaMinor")],
+   ["0b","1#","1b","0b","0b","6b","6#","0b","0b","0b"], "předznamenání");
+log((fails ? "SELHALO " + fails : "OK") + " (" + checks + " kontrol, po předznamenání)");
